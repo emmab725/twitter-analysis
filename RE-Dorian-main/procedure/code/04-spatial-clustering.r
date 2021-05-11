@@ -19,24 +19,26 @@ library(ggplot2)
 # and calculated normalized tweet rates in PostGIS
 
 # load dorian and november data if not already loaded
-dorian = readRDS(here("data","derived","private","dorian.RDS"))
+vaccine = readRDS(here("data","derived","private","vaccine.RDS"))
 november = readRDS(here("data","derived","private","november.RDS"))
 
-dorian_sf = dorian %>%
+vaccine_sf = vaccine %>%
   st_as_sf(coords = c("lng","lat"), crs=4326) %>%  # make point geometries
   st_transform(4269) %>%  # transform to NAD 1983
   st_join(select(counties,GEOID))  # spatially join counties to each tweet
 
-dorian_by_county = dorian_sf %>%
+vaccine_by_county = vaccine_sf %>%
   st_drop_geometry() %>%   # drop geometry / make simple table
   group_by(GEOID) %>%      # group by county using GEOID
   summarise(dorian = n())  # count # of tweets
 
 counties = counties %>%
-  left_join(dorian_by_county, by="GEOID") %>% # join count of tweets to counties
+  left_join(vaccine_by_county, by="GEOID") %>% # join count of tweets to counties
   mutate(dorian = replace_na(dorian,0))       # replace nulls with 0's
 
-rm(dorian_by_county)
+names(counties)[names(counties) == "dorian"] <- "vaccine"
+
+rm(vaccine_by_county)
 
 # Repeat the workflow above for tweets in November
 
@@ -79,7 +81,7 @@ thresdist = counties %>%
 
 # three optional steps to view results of nearest neighbors analysis
 thresdist # view statistical summary of the nearest neighbors 
-plot(counties_sp, border = 'lightgrey')  # plot counties background
+plot(counties_sf, border = 'lightgrey')  # plot counties background
 plot(selfdist, coords, add=TRUE, col = 'red') # plot nearest neighbor ties
 
 #Create weight matrix from the neighbor objects
